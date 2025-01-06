@@ -28,6 +28,7 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+#include <iomanip>
 
 #include "benchmark.h"
 #include "engine.h"
@@ -81,7 +82,7 @@ void UCIEngine::init_search_update_listeners() {
     engine.set_on_update_no_moves([](const auto& i) { on_update_no_moves(i); });
     engine.set_on_update_full(
       [this](const auto& i) { on_update_full(i, engine.get_options()["UCI_ShowWDL"]); });
-    engine.set_on_bestmove([](const auto& bm, const auto& p) { on_bestmove(bm, p); });
+    engine.set_on_bestmove([](const auto& bm, const auto& p, const auto& s) { on_bestmove(bm, p, s); });
     engine.set_on_verify_networks([](const auto& s) { print_info_string(s); });
 }
 
@@ -308,7 +309,7 @@ void UCIEngine::benchmark(std::istream& args) {
 
     engine.set_on_iter([](const auto&) {});
     engine.set_on_update_no_moves([](const auto&) {});
-    engine.set_on_bestmove([](const auto&, const auto&) {});
+    engine.set_on_bestmove([](const auto&, const auto&, const auto&) {});
     engine.set_on_verify_networks([](const auto&) {});
 
     Benchmark::BenchmarkSetup setup = Benchmark::setup_benchmark(args);
@@ -564,20 +565,35 @@ int UCIEngine::to_cp(Value v, const Position& pos) {
     return std::round(100 * int(v) / a);
 }
 
-std::string UCIEngine::wdl(Value v, const Position& pos) {
+std::string Stockfish::UCIEngine::sharpness_str(int wdl_w, int wdl_d, int wdl_l)
+{   
     std::stringstream ss;
 
-    int wdl_w = win_rate_model(v, pos);
-    int wdl_l = win_rate_model(-v, pos);
-    int wdl_d = 1000 - wdl_w - wdl_l;
+    if (wdl_w > 0 || wdl_d > 0 || wdl_l > 0)
+        ss << std::setprecision(2) <<  (wdl_w / 1000.0) << " " << (wdl_d / 1000.0) << " " << (wdl_l / 1000.0);
+    return ss.str();
+}
+
+std::string UCIEngine::wdl_str(int wdl_w, int wdl_d, int wdl_l) {
+    std::stringstream ss;
     ss << wdl_w << " " << wdl_d << " " << wdl_l;
 
     return ss.str();
 }
 
+std::string UCIEngine::wdl(Value v, const Position& pos, int& wdl_w, int& wdl_d, int& wdl_l) {
+
+    wdl_w = win_rate_model(v, pos);
+    wdl_l = win_rate_model(-v, pos);
+    wdl_d = 1000 - wdl_w - wdl_l;
+
+    return wdl_str(wdl_w, wdl_d, wdl_l);
+}
+
 std::string UCIEngine::square(Square s) {
     return std::string{char('a' + file_of(s)), char('1' + rank_of(s))};
 }
+
 
 std::string UCIEngine::move(Move m, bool chess960) {
     if (m == Move::none())
@@ -657,11 +673,14 @@ void UCIEngine::on_iter(const Engine::InfoIter& info) {
     sync_cout << ss.str() << sync_endl;
 }
 
-void UCIEngine::on_bestmove(std::string_view bestmove, std::string_view ponder) {
+void UCIEngine::on_bestmove(std::string_view bestmove, std::string_view ponder, std::string_view sharpness) {
     sync_cout << "bestmove " << bestmove;
     if (!ponder.empty())
         std::cout << " ponder " << ponder;
+    if (!sharpness.empty())
+        std::cout << " sharpness " << sharpness;
     std::cout << sync_endl;
+    
 }
 
 }  // namespace Stockfish

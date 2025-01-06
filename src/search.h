@@ -216,7 +216,7 @@ class SearchManager: public ISearchManager {
     using UpdateShort    = std::function<void(const InfoShort&)>;
     using UpdateFull     = std::function<void(const InfoFull&)>;
     using UpdateIter     = std::function<void(const InfoIteration&)>;
-    using UpdateBestmove = std::function<void(std::string_view, std::string_view)>;
+    using UpdateBestmove = std::function<void(std::string_view, std::string_view, std::string_view)>;
 
     struct UpdateContext {
         UpdateShort    onUpdateNoMoves;
@@ -328,6 +328,8 @@ class Worker {
     RootMoves rootMoves;
     Depth     rootDepth, completedDepth;
     Value     rootDelta;
+
+    int sum_wdl_w = 0, sum_wdl_d = 0, sum_wdl_l = 0;
 
     size_t                    threadIdx;
     NumaReplicatedAccessToken numaAccessToken;

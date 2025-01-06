@@ -46,7 +46,9 @@ class UCIEngine {
     static std::string format_score(const Score& s);
     static std::string square(Square s);
     static std::string move(Move m, bool chess960);
-    static std::string wdl(Value v, const Position& pos);
+    static std::string sharpness_str(int sum_wdl_w, int sum_wdl_d, int sum_wdl_l);
+    static std::string wdl_str(int wdl_w, int wdl_d, int wdl_l);
+    static std::string wdl(Value v, const Position& pos, int& wdl_w, int& wdl_d, int& wdl_l);
     static std::string to_lower(std::string str);
     static Move        to_move(const Position& pos, std::string str);
 
@@ -70,7 +72,7 @@ class UCIEngine {
     static void on_update_no_moves(const Engine::InfoShort& info);
     static void on_update_full(const Engine::InfoFull& info, bool showWDL);
     static void on_iter(const Engine::InfoIter& info);
-    static void on_bestmove(std::string_view bestmove, std::string_view ponder);
+    static void on_bestmove(std::string_view bestmove, std::string_view ponder, std::string_view sharpness);
 
     void init_search_update_listeners();
 };

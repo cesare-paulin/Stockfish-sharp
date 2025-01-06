@@ -213,7 +213,9 @@ void Search::Worker::start_searching() {
         ponder = UCIEngine::move(bestThread->rootMoves[0].pv[1], rootPos.is_chess960());
 
     auto bestmove = UCIEngine::move(bestThread->rootMoves[0].pv[0], rootPos.is_chess960());
-    main_manager()->updates.onBestmove(bestmove, ponder);
+    auto sharpness = UCIEngine::sharpness_str(sum_wdl_w, sum_wdl_d, sum_wdl_l);
+
+    main_manager()->updates.onBestmove(bestmove, ponder, sharpness);
 }
 
 // Main iterative deepening loop. It calls search()
@@ -2086,7 +2088,7 @@ void SearchManager::pv(Search::Worker&           worker,
     size_t     pvIdx     = worker.pvIdx;
     size_t     multiPV   = std::min(size_t(worker.options["MultiPV"]), rootMoves.size());
     uint64_t   tbHits    = threads.tb_hits() + (worker.tbConfig.rootInTB ? rootMoves.size() : 0);
-
+    worker.sum_wdl_w = worker.sum_wdl_d = worker.sum_wdl_l = 0;
     for (size_t i = 0; i < multiPV; ++i)
     {
         bool updated = rootMoves[i].score != -VALUE_INFINITE;
@@ -2117,8 +2119,14 @@ void SearchManager::pv(Search::Worker&           worker,
         // Remove last whitespace
         if (!pv.empty())
             pv.pop_back();
-
-        auto wdl   = worker.options["UCI_ShowWDL"] ? UCIEngine::wdl(v, pos) : "";
+        std::string wdl;
+        if (worker.options["UCI_ShowWDL"]) {
+            int wdl_w, wdl_d, wdl_l;
+            wdl   = UCIEngine::wdl(v, pos, wdl_w, wdl_d, wdl_l);
+            worker.sum_wdl_w += wdl_w;
+            worker.sum_wdl_d += wdl_d;
+            worker.sum_wdl_l += wdl_l;
+        }
         auto bound = rootMoves[i].scoreLowerbound
                      ? "lowerbound"
                      : (rootMoves[i].scoreUpperbound ? "upperbound" : "");
